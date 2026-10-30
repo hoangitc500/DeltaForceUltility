@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kho Loadout Meta - Delta Force Utility</title>
+  <link rel="stylesheet" href="../../core/theme.css">
+  <script src="../../core/theme.js"></script>
+  <style>
+    /* Chỉ ghim bộ lọc khi mở dạng tab (màn hình cao), popup/sidebar thấp sẽ bị che mất nội dung */
+    :root.view-tab .toolbar { position: sticky; top: 53px; z-index: 5; }
+    .toolbar { display: flex; flex-direction: column; gap: 8px; padding: 10px; margin: 0 -2px 12px; }
+    .search-wrap { position: relative; }
+    .search-wrap svg { position: absolute; left: 10px; top: 50%; width: 15px; height: 15px; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; }
+    .search-wrap .input { padding-left: 32px; }
+    .filter-row { display: flex; align-items: center; gap: 8px; }
+    .filter-row .label { flex: none; width: 52px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-faint); }
+    .filter-row .chips { flex: 1; min-width: 0; }
+
+    .lo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+
+    .lo-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color 0.15s, transform 0.15s;
+      animation: viewIn 0.2s ease;
+    }
+    .lo-card:hover { border-color: color-mix(in srgb, var(--primary) 50%, transparent); }
+
+    .lo-head { display: flex; align-items: center; gap: 10px; }
+    .lo-img {
+      flex: none;
+      width: 92px;
+      height: 46px;
+      object-fit: contain;
+      background: radial-gradient(circle at 50% 60%, var(--primary-soft), transparent 70%);
+      border-radius: 6px;
+    }
+    .lo-title { flex: 1; min-width: 0; }
+    .lo-weapon { font-size: 17px; font-weight: 700; line-height: 1.2; }
+    .lo-meta { font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fav-btn { flex: none; color: var(--text-faint); }
+    .fav-btn.on { color: var(--warning); }
+    .fav-btn.on svg { fill: currentColor; }
+
+    .lo-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .badge.mode-WARFARE { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); }
+    .badge.mode-OPERATIONS { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 35%, transparent); background: var(--warning-soft); }
+    .badge.hot { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 35%, transparent); background: var(--primary-soft); }
+
+    .lo-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+    .stat { font-size: 11px; color: var(--text-dim); }
+    .stat .row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+    .stat .row b { color: var(--text); font-variant-numeric: tabular-nums; }
+    .stat .bar { height: 4px; background: var(--input-bg); border-radius: 2px; overflow: hidden; }
+    .stat .bar > div { height: 100%; background: var(--primary); border-radius: 2px; }
+
+    .lo-code {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 10px;
+      background: var(--input-bg);
+      border: 1px dashed var(--border-strong);
+      border-radius: 6px;
+      color: var(--text);
+      transition: 0.15s;
+    }
+    .lo-code:hover { border-color: var(--primary); border-style: solid; }
+    .lo-code code { font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lo-code span { flex: none; font-size: 12px; font-weight: 700; color: var(--primary); }
+    .lo-code.copied { border-color: var(--primary); border-style: solid; background: var(--primary-soft); }
+
+    .skeleton { height: 210px; border-radius: var(--radius); background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface) 50%, var(--surface-2) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border: 1px solid var(--border); }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
+    .list-footer { display: flex; justify-content: center; padding: 14px 0 4px; }
+    .state-box { grid-column: 1 / -1; padding: 36px 12px; text-align: center; color: var(--text-dim); }
+    .state-box .big { font-size: 30px; margin-bottom: 6px; }
+    .result-info { font-size: 12px; color: var(--text-faint); margin-bottom: 8px; }
+
+    /* ---- Chọn nguồn ---- */
+    .source-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+    .source-tabs button {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      font-weight: 700;
+      text-align: left;
+      transition: 0.15s;
+    }
+    .source-tabs button small { font-size: 11px; font-weight: 500; color: var(--text-faint); }
+    .source-tabs button.active { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+
+    /* ---- Thẻ Garena đề xuất ---- */
+    .of-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .of-tag { padding: 1px 7px; border-radius: 4px; font-size: 11px; font-weight: 700; color: var(--c); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); background: color-mix(in srgb, var(--c) 12%, transparent); }
+    :root.light-theme .of-tag { color: color-mix(in srgb, var(--c) 55%, #000); }
+    .stat .delta { margin-left: 3px; font-size: 10px; font-weight: 600; }
+    .stat .delta.up { color: var(--primary); }
+    .stat .delta.down { color: var(--error); }
+    .stat .bar { position: relative; }
+    .stat .bar .base { position: absolute; top: 0; height: 100%; width: 2px; background: var(--text-faint); }
+    details.atts summary { cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-dim); }
+    .att-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+    .att { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 12px; }
+    .att img { width: 30px; height: 30px; object-fit: contain; background: var(--surface-2); border-radius: 4px; }
+    .att small { display: block; color: var(--text-faint); font-size: 10.5px; }
+  </style>
+</head>
+
+<body>
+  <div class="view-container">
+    <div class="view-header">
+      <div class="title-group">
+        <button class="back-btn" data-back></button>
+        <h3 class="view-title">Kho Loadout Meta<small>Mã cải tiến súng từ cộng đồng Garena</small></h3>
+      </div>
+      <button class="btn btn-sm btn-ghost" id="openMetaSite" title="Mở trang meta.deltaforce.garena.com">
+        Trang Meta
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+      </button>
+    </div>
+
+    <div class="source-tabs" id="sourceTabs">
+      <button class="active" data-src="community">Cộng đồng<small>meta.deltaforce.garena.com</small></button>
+      <button data-src="official">Garena đề xuất<small>Trạm Công Cụ chính thức</small></button>
+    </div>
+
+    <div class="panel toolbar hidden" id="officialBar">
+      <div class="filter-row"><span class="label">Chế độ</span><div class="chips" id="officialModes"></div></div>
+    </div>
+
+    <div class="panel toolbar" id="communityBar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input class="input" id="searchInput" type="search" placeholder="Tìm theo tên súng hoặc tác giả... (VD: M4A1, AKM)" autocomplete="off">
+      </div>
+      <div class="filter-row"><span class="label">Loại</span><div class="chips" id="typeChips"></div></div>
+      <div class="filter-row"><span class="label">Chế độ</span><div class="chips" id="modeChips"></div></div>
+      <div class="filter-row"><span class="label">Tầm</span><div class="chips" id="tagChips"></div></div>
+    </div>
+
+    <div class="result-info" id="resultInfo"></div>
+    <div class="lo-grid" id="grid"></div>
+    <div class="list-footer"><button class="btn hidden" id="loadMoreBtn">Tải thêm</button></div>
+
+    <p class="source-note" id="noteCommunity">
+      Nguồn dữ liệu loadout, chỉ số và ảnh súng: <a href="https://meta.deltaforce.garena.com/loadout" target="_blank" rel="noopener">Garena Delta Force Meta</a> (do cộng đồng đóng góp).
+    </p>
+    <p class="source-note hidden" id="noteOfficial">
+      Nguồn: <a href="https://www.playdeltaforce.com/events/hq/vi/index.html" target="_blank" rel="noopener">Trạm Công Cụ Tổng hành dinh Delta Force</a> (trang chính thức, kênh Garena). Ảnh súng, phụ kiện và mã thuộc về nhà phát hành.
+    </p>
+  </div>
+
+  <script src="../../core/shell.js"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>

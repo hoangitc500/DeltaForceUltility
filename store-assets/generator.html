@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Store Asset Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #0b1118;
+    --surface: #131d28;
+    --surface-2: rgba(255, 255, 255, 0.04);
+    --text: #eef3f7;
+    --text-dim: #8fa1b3;
+    --primary: #00e676;
+    --primary-soft: rgba(0, 230, 118, 0.12);
+    --on-primary: #04140b;
+    --accent: #4fc3f7;
+    --border: rgba(120, 144, 168, 0.22);
+    --radius: 8px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 16px 80px;
+    background: radial-gradient(120% 80% at 100% 0%, #16283a 0%, #0b1118 55%, #080c11 100%) fixed, var(--bg);
+    color: var(--text);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 1320px; margin: 0 auto; }
+  header { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between; margin-bottom: 18px; }
+  h1 { margin: 0; font-size: 24px; }
+  h1 b { color: var(--primary); }
+  header p { margin: 4px 0 0; color: var(--text-dim); }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  button, .btn {
+    font: inherit; font-weight: 600; cursor: pointer;
+    padding: 8px 14px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  }
+  button:hover { border-color: var(--primary); }
+  button.primary { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+  button.sm { padding: 5px 10px; font-size: 12.5px; }
+  .tips {
+    margin-bottom: 18px; padding: 14px 16px;
+    background: var(--primary-soft); border: 1px solid rgba(0, 230, 118, 0.3); border-radius: var(--radius);
+  }
+  .tips h2 { margin: 0 0 6px; font-size: 15px; color: var(--primary); }
+  .tips ol { margin: 0; padding-left: 20px; color: var(--text); }
+  .tips code { font-family: Consolas, monospace; font-size: 12.5px; background: rgba(0,0,0,.35); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+  .card {
+    margin-bottom: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    transition: border-color .15s;
+  }
+  .card.active { border-color: var(--primary); }
+  .card-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .card-head .num { font-weight: 700; color: var(--primary); font-size: 18px; }
+  .card-head h2 { margin: 0; font-size: 16px; flex: 1; min-width: 160px; }
+  .card-head .size { color: var(--text-dim); font-size: 12.5px; }
+  .card-body { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; padding: 16px; }
+  @media (max-width: 900px) { .card-body { grid-template-columns: 1fr; } }
+  .fields { display: flex; flex-direction: column; gap: 10px; }
+  .fields .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; }
+  label small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  input, textarea, select {
+    font: inherit; font-size: 14px; color: var(--text); text-transform: none; letter-spacing: 0;
+    padding: 7px 9px; border-radius: 6px; border: 1px solid var(--border); background: rgba(0,0,0,.4);
+  }
+  textarea { resize: vertical; min-height: 58px; }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); }
+  .img-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .img-actions .meta { color: var(--text-dim); font-size: 12px; }
+  .preview { position: relative; min-width: 0; }
+  .preview canvas { display: block; width: 100%; height: auto; border-radius: 6px; border: 1px solid var(--border); cursor: copy; }
+  .preview.drag canvas { outline: 2px dashed var(--primary); outline-offset: 3px; }
+  .tiles { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); gap: 14px; align-items: start; }
+  @media (max-width: 1100px) { .tiles { grid-template-columns: 1fr; } }
+  .tiles figure { margin: 0; }
+  .tiles figcaption { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; color: var(--text-dim); font-size: 12.5px; }
+  .tiles canvas { cursor: default; }
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0;
+    padding: 10px 16px; border-radius: 6px; background: var(--primary); color: var(--on-primary); font-weight: 600;
+    transition: opacity .2s, transform .2s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Tạo ảnh cho <b>Chrome Web Store</b></h1>
+      <p>5 ảnh chụp màn hình 1280×800 + ảnh quảng bá 440×280 và 1400×560. Xuất PNG 24-bit (không kênh alpha) đúng chuẩn Store.</p>
+    </div>
+    <div class="toolbar">
+      <button id="resetText">Khôi phục chữ mặc định</button>
+      <button class="primary" id="dlAll">Tải tất cả (7 ảnh)</button>
+    </div>
+  </header>
+
+  <section class="tips">
+    <h2>Cách chụp ảnh gốc cho nét</h2>
+    <ol>
+      <li>Mở trang của extension trong một tab, ví dụ <code>chrome-extension://fkjclegjngefkedpjhodfpjfinjfhlof/popup.html</code> hoặc <code>…/modules/armory/index.html</code>.</li>
+      <li>Nhấn <b>F12</b> → <b>Ctrl+Shift+M</b> (Device toolbar), đặt kích thước ví dụ <b>420×720</b> (giống side panel) và <b>DPR = 2</b>.</li>
+      <li>Menu ⋮ của Device toolbar → <b>Capture screenshot</b>. Kéo thả file vào khung ảnh bên dưới, hoặc bấm vào khung rồi <b>Ctrl+V</b>.</li>
+    </ol>
+  </section>
+
+  <div id="slots"></div>
+
+  <section class="card" id="tilesCard">
+    <div class="card-head">
+      <span class="num">★</span><h2>Ảnh quảng bá (Promo tiles)</h2>
+    </div>
+    <div class="card-body">
+      <div class="fields">
+        <div class="row">
+          <label>Tên dòng 1<input data-k="brand.name1"></label>
+          <label>Tên dòng 2 (màu xanh)<input data-k="brand.name2"></label>
+        </div>
+        <label>Khẩu hiệu<textarea data-k="brand.tagline" rows="2"></textarea></label>
+        <label>Thẻ tính năng <small>(cách nhau bằng dấu phẩy, chỉ ở ảnh lớn)</small><input data-k="brand.chips"></label>
+        <label>Ảnh hiển thị ở ảnh lớn
+          <select data-k="brand.marqueeShot">
+            <option value="0">Ảnh chụp 1</option><option value="1">Ảnh chụp 2</option><option value="2">Ảnh chụp 3</option>
+            <option value="3">Ảnh chụp 4</option><option value="4">Ảnh chụp 5</option>
+          </select>
+        </label>
+      </div>
+      <div class="tiles">
+        <figure>
+          <figcaption><span>Small promo tile · 440×280</span><button class="sm" data-dl="small">Tải PNG</button></figcaption>
+          <div class="preview"><canvas id="cvSmall" width="440" height="280"></canvas></div>
+        </figure>
+        <figure>
+          <figcaption><span>Marquee promo tile · 1400×560</span><button class="sm" data-dl="marquee">Tải PNG</button></figcaption>
+          <div class="preview"><canvas id="cvMarquee" width="1400" height="560"></canvas></div>
+        </figure>
+      </div>
+    </div>
+  </section>
+</div>
+<div id="toast"></div>
+
+<script src="icon-data.js"></script>
+<script>
+const C = {
+  text: '#eef3f7', dim: '#8fa1b3', faint: '#5d6f80',
+  primary: '#00e676', primarySoft: 'rgba(0, 230, 118, 0.12)', accent: '#4fc3f7'
+};
+const FONT = '"Chakra Petch", sans-serif';
+const STORE_KEY = 'dfu-store-assets-v1';
+
+const DEFAULTS = {
+  brand: {
+    name1: 'Delta Force',
+    name2: 'Utility',
+    tagline: 'Bộ công cụ tất-cả-trong-một cho game thủ Delta Force',
+    chips: 'Giftcode, Loadout Meta, Bản đồ, Cẩm nang, Sản xuất, Giá chợ',
+    marqueeShot: '1'
+  },
+  shots: [
+    { kicker: 'Màn hình chính', title: 'Mọi công cụ Delta Force *trong 1 cú click*', sub: 'Mở từ thanh công cụ hoặc ghim vào Side Panel của Chrome.',
+      bullets: 'Mật khẩu phòng hôm nay ngay trang đầu\n7 công cụ dành cho game thủ\nGiao diện sáng / tối', layout: 'right', fit: 'contain' },
+    { kicker: 'Kho Loadout Meta', title: 'Loadout meta, *copy 1 chạm*', sub: 'Mã cải tiến súng hot nhất từ cộng đồng.',
+      bullets: 'Lọc theo loại súng, chế độ, tầm bắn\nXem chỉ số chi tiết từng bản\nLưu loadout yêu thích', layout: 'right', fit: 'contain' },
+    { kicker: 'Nhập Giftcode', title: 'Đổi giftcode *hàng loạt*', sub: 'Dán danh sách mã, extension tự nhập giúp bạn.',
+      bullets: 'Tự bỏ qua mã đã nhập\nKhông cần gõ từng mã\nNhập trực tiếp trên trang Garena', layout: 'left', fit: 'contain' },
+    { kicker: 'Sản xuất Căn Cứ', title: 'Món *lãi nhất* cho từng trạm', sub: 'Gợi ý sản xuất tối ưu, hẹn giờ và báo khi hoàn thành.',
+      bullets: 'So sánh lợi nhuận từng món\nHẹn giờ cho mỗi trạm\nThông báo ngay trên Chrome', layout: 'right', fit: 'contain' },
+    { kicker: 'Bản đồ · Cẩm nang · Giá chợ', title: 'Tra cứu *mọi thứ* bạn cần', sub: 'Bản đồ tương tác, cẩm nang vật phẩm và giá chợ đấu giá.',
+      bullets: 'Điểm loot, chìa khóa phòng\nSúng, giáp, đạn, đặc công\nGiá chợ cập nhật mỗi giờ', layout: 'left', fit: 'contain' }
+  ]
+};
+
+let state = load();
+const images = [null, null, null, null, null];
+let activeSlot = 0;
+const icon = new Image();
+if (window.DFU_ICON) icon.src = window.DFU_ICON;
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (saved && saved.brand && Array.isArray(saved.shots)) return saved;
+  } catch (e) {}
+  return structuredClone(DEFAULTS);
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+function getPath(p) { return p.split('.').reduce((o, k) => o[k], state); }
+function setPath(p, v) {
+  const keys = p.split('.'), last = keys.pop();
+  keys.reduce((o, k) => o[k], state)[last] = v;
+}
+
+/* ================= Drawing helpers ================= */
+function rr(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, r);
+}
+
+function drawBg(ctx, w, h, step = 40) {
+  const g = ctx.createRadialGradient(w, 0, 0, w, 0, Math.max(w, h) * 1.15);
+  g.addColorStop(0, '#16283a');
+  g.addColorStop(0.55, '#0b1118');
+  g.addColorStop(1, '#080c11');
+  ctx.fillStyle = '#0b1118';
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(120, 144, 168, 0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = step; x < w; x += step) { ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, h); }
+  for (let y = step; y < h; y += step) { ctx.moveTo(0, y + 0.5); ctx.lineTo(w, y + 0.5); }
+  ctx.stroke();
+
+  const glow = ctx.createRadialGradient(0, h, 0, 0, h, h);
+  glow.addColorStop(0, 'rgba(0, 230, 118, 0.16)');
+  glow.addColorStop(1, 'rgba(0, 230, 118, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
+
+  // Thanh nhấn màu xanh ở mép trên
+  ctx.fillStyle = C.primary;
+  ctx.fillRect(0, 0, w, Math.max(3, Math.round(h / 200)));
+}
+
+// Tách chuỗi thành token; phần nằm giữa *...* được tô màu nhấn
+function tokenize(s) {
+  const out = [];
+  String(s || '').split('*').forEach((part, i) => {
+    const hi = i % 2 === 1;
+    part.split('\n').forEach((seg, j) => {
+      if (j > 0) out.push({ br: true });
+      seg.split(/(\s+)/).forEach(t => { if (t) out.push({ t, hi }); });
+    });
+  });
+  return out;
+}
+
+function wrap(ctx, s, maxW) {
+  const lines = [];
+  let line = [], w = 0;
+  const push = () => {
+    while (line.length && /^\s+$/.test(line[line.length - 1].t)) w -= line.pop().w;
+    lines.push({ toks: line, w });
+    line = []; w = 0;
+  };
+  for (const tk of tokenize(s)) {
+    if (tk.br) { push(); continue; }
+    const space = /^\s+$/.test(tk.t);
+    if (space && !line.length) continue;
+    const tw = ctx.measureText(tk.t).width;
+    if (!space && line.length && w + tw > maxW) push();
+    line.push({ ...tk, w: tw });
+    w += tw;
+  }
+  if (line.length) push();
+  return lines;
+}
+
+function setFont(ctx, weight, size, ls = 0) {
+  ctx.font = `${weight} ${size}px ${FONT}`;
+  ctx.letterSpacing = ls + 'px';
+  ctx.textBaseline = 'middle';
+}
+
+// Dựng khối chữ (nhãn, tiêu đề, mô tả, gạch đầu dòng) rồi vẽ, căn giữa theo chiều dọc
+function buildText(ctx, s, maxW, center) {
+  const items = [];
+  const add = (text, weight, size, lh, color, hi, gap, opts = {}) => {
+    if (!String(text || '').trim()) return;
+    setFont(ctx, weight, size, opts.ls || 0);
+    const indent = opts.bullet ? 38 : 0;
+    items.push({ weight, size, ls: opts.ls || 0, lh: size * lh, color, hi, gap, indent, bullet: opts.bullet,
+      lines: wrap(ctx, text, maxW - indent) });
+  };
+  add(String(s.kicker || '').toUpperCase(), 600, 18, 1.3, C.accent, C.accent, 16, { ls: 3 });
+  add(s.title, 700, center ? 50 : 56, 1.14, C.text, C.primary, 20);
+  add(s.sub, 400, 24, 1.4, C.dim, C.primary, 32);
+  if (!center) {
+    String(s.bullets || '').split('\n').filter(b => b.trim()).slice(0, 5)
+      .forEach(b => add(b, 500, 21, 1.35, C.text, C.primary, 16, { bullet: true }));
+  }
+  const height = items.reduce((h, it) => h + it.lines.length * it.lh + it.gap, 0) - (items.length ? items[items.length - 1].gap : 0);
+  return { items, height };
+}
+
+function drawText(ctx, block, x, y, center) {
+  for (const it of block.items) {
+    setFont(ctx, it.weight, it.size, it.ls);
+    if (it.bullet) drawCheck(ctx, x, y + it.lh / 2 - 12);
+    it.lines.forEach((line, n) => {
+      let cx = center ? x - line.w / 2 : x + it.indent;
+      const cy = y + n * it.lh + it.lh / 2;
+      for (const tk of line.toks) {
+        ctx.fillStyle = tk.hi ? it.hi : it.color;
+        ctx.fillText(tk.t, cx, cy);
+        cx += tk.w;
+      }
+    });
+    y += it.lines.length * it.lh + it.gap;
+  }
+}
+
+function drawCheck(ctx, x, y) {
+  rr(ctx, x, y, 24, 24, 6);
+  ctx.fillStyle = C.primarySoft;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0, 230, 118, 0.55)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + 6.5, y + 12.5);
+  ctx.lineTo(x + 10.5, y + 16.5);
+  ctx.lineTo(x + 17.5, y + 8.5);
+  ctx.strokeStyle = C.primary;
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+function drawBrand(ctx, x, y, size, center) {
+  setFont(ctx, 700, size * 0.44, size * 0.08);
+  const a = (state.brand.name1 + ' ').toUpperCase(), b = state.brand.name2.toUpperCase();
+  const tw = ctx.measureText(a).width + ctx.measureText(b).width;
+  const gap = size * 0.35;
+  let cx = center ? x - (size + gap + tw) / 2 : x;
+  if (icon.complete && icon.naturalWidth) ctx.drawImage(icon, cx, y, size, size);
+  cx += size + gap;
+  ctx.fillStyle = C.text;
+  ctx.fillText(a, cx, y + size / 2);
+  ctx.fillStyle = C.primary;
+  ctx.fillText(b, cx + ctx.measureText(a).width, y + size / 2);
+}
+
+function drawBrackets(ctx, x, y, w, h, len, off) {
+  ctx.strokeStyle = C.primary;
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'square';
+  const corners = [[x - off, y - off, 1, 1], [x + w + off, y - off, -1, 1], [x - off, y + h + off, 1, -1], [x + w + off, y + h + off, -1, -1]];
+  ctx.beginPath();
+  for (const [cx, cy, dx, dy] of corners) {
+    ctx.moveTo(cx + dx * len, cy);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx, cy + dy * len);
+  }
+  ctx.stroke();
+}
+
+// Vẽ ảnh chụp trong khung cửa sổ; fit = 'contain' (vừa khung) hoặc 'cover' (lấp chiều ngang, cắt phía dưới)
+function drawFrame(ctx, img, box, fit) {
+  const bar = Math.round(Math.min(34, box.h * 0.06));
+  let fw = box.w, fh = box.h, src = null;
+  if (img) {
+    if (fit === 'cover') {
+      const s = box.w / img.width;
+      const ih = Math.min(img.height * s, box.h - bar);
+      fh = ih + bar;
+      src = [0, 0, img.width, ih / s];
+    } else {
+      const s = Math.min(box.w / img.width, (box.h - bar) / img.height);
+      fw = img.width * s;
+      fh = img.height * s + bar;
+      src = [0, 0, img.width, img.height];
+    }
+  }
+  const x = Math.round(box.x + (box.w - fw) / 2), y = Math.round(box.y + (box.h - fh) / 2);
+  const r = 12;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+  ctx.shadowBlur = 60;
+  ctx.shadowOffsetY = 24;
+  rr(ctx, x, y, fw, fh, r);
+  ctx.fillStyle = '#0d151e';
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 230, 118, 0.35)';
+  ctx.shadowBlur = 40;
+  rr(ctx, x, y, fw, fh, r);
+  ctx.strokeStyle = 'rgba(0, 230, 118, 0.45)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  rr(ctx, x, y, fw, fh, r);
+  ctx.clip();
+  ctx.fillStyle = '#111b26';
+  ctx.fillRect(x, y, fw, bar);
+  ['#5d6f80', '#5d6f80', C.primary].forEach((c, i) => {
+    ctx.beginPath();
+    ctx.arc(x + 18 + i * 16, y + bar / 2, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = c;
+    ctx.fill();
+  });
+  if (img) {
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, ...src, x, y + bar, fw, fh - bar);
+  } else {
+    ctx.setLineDash([10, 8]);
+    ctx.strokeStyle = 'rgba(143, 161, 179, 0.4)';
+    ctx.lineWidth = 2;
+    rr(ctx, x + 24, y + bar + 24, fw - 48, fh - bar - 48, 10);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    setFont(ctx, 600, 22);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = C.dim;
+    ctx.fillText('Kéo thả hoặc dán (Ctrl+V)', x + fw / 2, y + bar + (fh - bar) / 2 - 16);
+    ctx.fillText('ảnh chụp extension vào đây', x + fw / 2, y + bar + (fh - bar) / 2 + 16);
+    ctx.textAlign = 'left';
+  }
+  ctx.restore();
+
+  rr(ctx, x, y, fw, fh, r);
+  ctx.strokeStyle = 'rgba(120, 144, 168, 0.35)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  drawBrackets(ctx, x, y, fw, fh, 26, 12);
+}
+
+/* ================= Renderers ================= */
+function renderShot(i) {
+  const cv = document.querySelector(`canvas[data-shot="${i}"]`);
+  const ctx = cv.getContext('2d');
+  const W = 1280, H = 800, s = state.shots[i];
+  drawBg(ctx, W, H);
+
+  if (s.layout === 'top') {
+    drawBrand(ctx, W / 2, 36, 36, true);
+    const block = buildText(ctx, s, 1040, true);
+    const ty = 104;
+    drawText(ctx, block, W / 2, ty, true);
+    const iy = ty + block.height + 36;
+    drawFrame(ctx, images[i], { x: 100, y: iy, w: W - 200, h: H - iy - 40 }, s.fit);
+    return;
+  }
+
+  const textLeft = s.layout !== 'left';
+  const tx = textLeft ? 72 : 744, tw = 464;
+  const box = textLeft ? { x: 600, y: 56, w: 620, h: 688 } : { x: 60, y: 56, w: 620, h: 688 };
+  drawBrand(ctx, tx, 56, 40, false);
+  const block = buildText(ctx, s, tw, false);
+  drawText(ctx, block, tx, Math.max(130, 130 + (620 - block.height) / 2), false);
+  drawFrame(ctx, images[i], box, s.fit);
+}
+
+function renderSmall() {
+  const ctx = document.getElementById('cvSmall').getContext('2d');
+  const W = 440, H = 280, b = state.brand;
+  drawBg(ctx, W, H, 22);
+  const isz = 104, tx = 36 + isz + 22, maxW = W - tx - 24;
+
+  setFont(ctx, 700, 30, 1);
+  const n1 = wrap(ctx, b.name1.toUpperCase(), maxW), n2 = wrap(ctx, b.name2.toUpperCase(), maxW);
+  setFont(ctx, 400, 14.5);
+  const tag = wrap(ctx, b.tagline, maxW).slice(0, 3);
+  const h = (n1.length + n2.length) * 32 + 10 + tag.length * 20;
+  let y = (H - h) / 2;
+
+  if (icon.complete && icon.naturalWidth) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 230, 118, 0.35)';
+    ctx.shadowBlur = 24;
+    ctx.drawImage(icon, 36, (H - isz) / 2, isz, isz);
+    ctx.restore();
+  }
+  setFont(ctx, 700, 30, 1);
+  for (const [lines, color] of [[n1, C.text], [n2, C.primary]]) {
+    for (const l of lines) {
+      ctx.fillStyle = color;
+      ctx.fillText(l.toks.map(t => t.t).join(''), tx, y + 16);
+      y += 32;
+    }
+  }
+  y += 10;
+  setFont(ctx, 400, 14.5);
+  ctx.fillStyle = C.dim;
+  for (const l of tag) { ctx.fillText(l.toks.map(t => t.t).join(''), tx, y + 10); y += 20; }
+  drawBrackets(ctx, 14, 14, W - 28, H - 28, 18, 0);
+}
+
+function renderMarquee() {
+  const ctx = document.getElementById('cvMarquee').getContext('2d');
+  const W = 1400, H = 560, b = state.brand;
+  drawBg(ctx, W, H);
+  const tx = 80, maxW = 600, isz = 84;
+
+  setFont(ctx, 700, 74, 1);
+  const n1 = wrap(ctx, b.name1, maxW), n2 = wrap(ctx, b.name2, maxW);
+  setFont(ctx, 400, 26);
+  const tag = wrap(ctx, b.tagline, maxW).slice(0, 3);
+  setFont(ctx, 600, 18, 0.5);
+  const chips = String(b.chips || '').split(',').map(c => c.trim()).filter(Boolean);
+  const rows = [[]];
+  let rw = 0;
+  for (const c of chips) {
+    const w = ctx.measureText(c).width + 36;
+    if (rw + w > maxW + 40 && rows[rows.length - 1].length) { rows.push([]); rw = 0; }
+    rows[rows.length - 1].push({ c, w });
+    rw += w + 10;
+  }
+  const chipH = chips.length ? rows.length * 50 : 0;
+  const h = isz + 24 + (n1.length + n2.length) * 80 + 16 + tag.length * 36 + (chipH ? 28 + chipH - 10 : 0);
+  let y = (H - h) / 2;
+
+  if (icon.complete && icon.naturalWidth) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 230, 118, 0.35)';
+    ctx.shadowBlur = 30;
+    ctx.drawImage(icon, tx, y, isz, isz);
+    ctx.restore();
+  }
+  y += isz + 24;
+  setFont(ctx, 700, 74, 1);
+  for (const [lines, color] of [[n1, C.text], [n2, C.primary]]) {
+    for (const l of lines) {
+      ctx.fillStyle = color;
+      ctx.fillText(l.toks.map(t => t.t).join(''), tx, y + 40);
+      y += 80;
+    }
+  }
+  y += 16;
+  setFont(ctx, 400, 26);
+  ctx.fillStyle = C.dim;
+  for (const l of tag) { ctx.fillText(l.toks.map(t => t.t).join(''), tx, y + 18); y += 36; }
+  if (chips.length) {
+    y += 28;
+    setFont(ctx, 600, 18, 0.5);
+    for (const row of rows) {
+      let cx = tx;
+      for (const { c, w } of row) {
+        rr(ctx, cx, y, w, 40, 20);
+        ctx.fillStyle = C.primarySoft;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0, 230, 118, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = C.primary;
+        ctx.fillText(c, cx + 18, y + 21);
+        cx += w + 10;
+      }
+      y += 50;
+    }
+  }
+  const si = Number(b.marqueeShot) || 0;
+  drawFrame(ctx, images[si], { x: 780, y: 56, w: 560, h: 448 }, 'cover');
+}
+
+function renderAll() {
+  state.shots.forEach((_, i) => renderShot(i));
+  renderSmall();
+  renderMarquee();
+}
+
+/* ================= PNG 24-bit (không alpha) ================= */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+function chunk(type, data) {
+  const out = new Uint8Array(12 + data.length);
+  const dv = new DataView(out.buffer);
+  dv.setUint32(0, data.length);
+  for (let i = 0; i < 4; i++) out[4 + i] = type.charCodeAt(i);
+  out.set(data, 8);
+  dv.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+  return out;
+}
+async function png24(canvas) {
+  const w = canvas.width, h = canvas.height;
+  const px = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+  const stride = w * 3 + 1;
+  const raw = new Uint8Array(stride * h);
+  for (let y = 0; y < h; y++) {
+    const o = y * stride;
+    raw[o] = y ? 2 : 0; // bộ lọc "Up" giúp nén tốt hơn
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4, j = o + 1 + x * 3;
+      for (let c = 0; c < 3; c++) raw[j + c] = y ? (px[i + c] - px[i + c - w * 4]) & 255 : px[i + c];
+    }
+  }
+  const z = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer());
+  const ihdr = new Uint8Array(13);
+  const dv = new DataView(ihdr.buffer);
+  dv.setUint32(0, w);
+  dv.setUint32(4, h);
+  ihdr.set([8, 2, 0, 0, 0], 8);
+  return new Blob([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', z), chunk('IEND', new Uint8Array())], { type: 'image/png' });
+}
+
+async function download(canvas, name) {
+  const blob = await png24(canvas);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+const exportsList = () => [
+  ...state.shots.map((_, i) => [document.querySelector(`canvas[data-shot="${i}"]`), `screenshot-${i + 1}-1280x800.png`]),
+  [document.getElementById('cvSmall'), 'promo-small-440x280.png'],
+  [document.getElementById('cvMarquee'), 'promo-marquee-1400x560.png']
+];
+
+/* ================= UI ================= */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function buildSlots() {
+  const host = document.getElementById('slots');
+  host.innerHTML = state.shots.map((_, i) => `
+    <section class="card slot" data-slot="${i}">
+      <div class="card-head">
+        <span class="num">0${i + 1}</span><h2>Ảnh chụp màn hình ${i + 1}</h2>
+        <span class="size">1280 × 800</span>
+        <button class="sm" data-dl="${i}">Tải PNG</button>
+      </div>
+      <div class="card-body">
+        <div class="fields">
+          <div class="img-actions">
+            <button type="button" class="sm" data-pick="${i}">Chọn ảnh…</button>
+            <button type="button" class="sm" data-clear="${i}">Xóa ảnh</button>
+            <span class="meta" data-meta="${i}">Chưa có ảnh</span>
+            <input type="file" accept="image/*" hidden data-file="${i}">
+          </div>
+          <div class="row">
+            <label>Bố cục
+              <select data-k="shots.${i}.layout">
+                <option value="right">Chữ trái, ảnh phải</option>
+                <option value="left">Ảnh trái, chữ phải</option>
+                <option value="top">Chữ trên, ảnh dưới</option>
+              </select>
+            </label>
+            <label>Cách đặt ảnh
+              <select data-k="shots.${i}.fit">
+                <option value="contain">Vừa khung</option>
+                <option value="cover">Lấp ngang, cắt dưới</option>
+              </select>
+            </label>
+          </div>
+          <label>Nhãn nhỏ<input data-k="shots.${i}.kicker"></label>
+          <label>Tiêu đề <small>— bọc *chữ* để tô xanh</small><textarea rows="2" data-k="shots.${i}.title"></textarea></label>
+          <label>Mô tả<textarea rows="2" data-k="shots.${i}.sub"></textarea></label>
+          <label>Điểm nổi bật <small>— mỗi dòng một ý (ẩn với bố cục "chữ trên")</small><textarea rows="3" data-k="shots.${i}.bullets"></textarea></label>
+        </div>
+        <div class="preview" data-drop="${i}"><canvas width="1280" height="800" data-shot="${i}"></canvas></div>
+      </div>
+    </section>`).join('');
+}
+
+function fillInputs() {
+  document.querySelectorAll('[data-k]').forEach(el => { el.value = getPath(el.dataset.k); });
+}
+
+function setImage(i, file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const img = new Image();
+  img.onload = () => {
+    images[i] = img;
+    document.querySelector(`[data-meta="${i}"]`).textContent = `${file.name || 'Ảnh dán'} · ${img.width}×${img.height}`;
+    renderAll();
+    toast(`Đã đặt ảnh vào ô ${i + 1}`);
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+function setActive(i) {
+  activeSlot = i;
+  document.querySelectorAll('.slot').forEach(el => el.classList.toggle('active', Number(el.dataset.slot) === i));
+}
+
+buildSlots();
+fillInputs();
+setActive(0);
+
+document.addEventListener('input', e => {
+  const k = e.target.dataset && e.target.dataset.k;
+  if (!k) return;
+  setPath(k, e.target.value);
+  save();
+  renderAll();
+});
+
+document.addEventListener('click', async e => {
+  const t = e.target.closest('button');
+  if (!t) return;
+  if (t.dataset.pick !== undefined) document.querySelector(`[data-file="${t.dataset.pick}"]`).click();
+  if (t.dataset.clear !== undefined) {
+    const i = Number(t.dataset.clear);
+    images[i] = null;
+    document.querySelector(`[data-meta="${i}"]`).textContent = 'Chưa có ảnh';
+    renderAll();
+  }
+  if (t.dataset.dl !== undefined) {
+    const list = exportsList();
+    const idx = t.dataset.dl === 'small' ? 5 : t.dataset.dl === 'marquee' ? 6 : Number(t.dataset.dl);
+    await download(...list[idx]);
+  }
+});
+
+document.addEventListener('change', e => {
+  const i = e.target.dataset && e.target.dataset.file;
+  if (i !== undefined) { setImage(Number(i), e.target.files[0]); e.target.value = ''; }
+});
+
+document.addEventListener('pointerdown', e => {
+  const slot = e.target.closest('.slot');
+  if (slot) setActive(Number(slot.dataset.slot));
+});
+
+document.querySelectorAll('[data-drop]').forEach(el => {
+  const i = Number(el.dataset.drop);
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag'); });
+  el.addEventListener('dragleave', () => el.classList.remove('drag'));
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    el.classList.remove('drag');
+    setActive(i);
+    setImage(i, e.dataTransfer.files[0]);
+  });
+  el.addEventListener('click', () => document.querySelector(`[data-file="${i}"]`).click());
+});
+
+document.addEventListener('paste', e => {
+  const item = [...(e.clipboardData ? e.clipboardData.items : [])].find(it => it.type.startsWith('image/'));
+  if (!item) return;
+  e.preventDefault();
+  setImage(activeSlot, item.getAsFile());
+});
+
+document.getElementById('resetText').addEventListener('click', () => {
+  state = structuredClone(DEFAULTS);
+  save();
+  fillInputs();
+  renderAll();
+  toast('Đã khôi phục chữ mặc định');
+});
+
+document.getElementById('dlAll').addEventListener('click', async () => {
+  for (const [cv, name] of exportsList()) {
+    await download(cv, name);
+    await new Promise(r => setTimeout(r, 350));
+  }
+  toast('Đã xuất 7 ảnh');
+});
+
+// Chờ font Chakra Petch (kể cả bộ ký tự tiếng Việt) trước khi vẽ lên canvas
+const VI_SAMPLE = 'Delta Force Utility Đđàáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵ';
+renderAll();
+icon.onload = renderAll;
+Promise.all([400, 500, 600, 700].map(w => document.fonts.load(`${w} 40px "Chakra Petch"`, VI_SAMPLE)))
+  .catch(() => {})
+  .then(renderAll);
+document.fonts.addEventListener('loadingdone', renderAll);
+</script>
+</body>
+</html>

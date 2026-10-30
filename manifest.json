@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Delta Force Utility",
+  "version": "1.4.0",
+  "description": "Bộ công cụ cho game thủ Delta Force: tự động nhập giftcode, kho loadout, bản đồ, cẩm nang, đề xuất sản xuất & hẹn giờ, mật khẩu phòng, giá chợ.",
+  "permissions": [
+    "scripting",
+    "tabs",
+    "storage",
+    "sidePanel",
+    "alarms",
+    "notifications"
+  ],
+  "host_permissions": [
+    "*://redeem.df.garena.sg/*",
+    "*://docs.google.com/*",
+    "*://meta.deltaforce.garena.com/*",
+    "*://dfloadout.gg/*",
+    "*://www.playdeltaforce.com/*"
+  ],
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "side_panel": {
+    "default_path": "popup.html?sidebar=true"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

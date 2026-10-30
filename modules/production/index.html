@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sản xuất Căn Cứ - Delta Force Utility</title>
+  <link rel="stylesheet" href="../../core/theme.css">
+  <script src="../../core/theme.js"></script>
+  <style>
+    /* ---- Hẹn giờ ---- */
+    .timers { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 8px; }
+    .timer {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 9px 10px 11px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .timer .st { font-size: 11px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: var(--text-faint); padding-right: 22px; }
+    .timer .it { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .timer .left { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .timer.done { border-color: var(--primary); background: var(--primary-soft); }
+    .timer.done .left { color: var(--primary); font-family: var(--font); font-size: 13px; }
+    .timer .bar { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); }
+    .timer.done .bar { background: var(--primary); }
+    .timer .x { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; }
+    .timer .x svg { width: 13px; height: 13px; }
+
+    /* ---- Bộ lọc ---- */
+    .controls { display: flex; flex-direction: column; gap: 8px; }
+    .ctl-row { display: flex; align-items: center; gap: 8px; }
+    .ctl-row .label { flex: none; width: 84px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-faint); }
+    .ctl-row .chips { flex: 1; min-width: 0; }
+    .station-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .station-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      min-width: 0;
+      padding: 7px 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-align: left;
+      transition: 0.15s;
+    }
+    .station-tab:hover { border-color: var(--border-strong); }
+    .station-tab.active { border-color: var(--primary); background: var(--primary-soft); }
+    .station-tab .nm { max-width: 100%; font-size: 12px; font-weight: 700; line-height: 1.25; }
+    .station-tab .best { font-size: 11px; color: var(--primary); font-variant-numeric: tabular-nums; }
+
+    .list-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 14px 0 8px; }
+    .list-head h4 { margin: 0; font-size: 15px; }
+    .lv-seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: 6px; overflow: hidden; }
+    .lv-seg button { padding: 3px 10px; background: transparent; border: none; color: var(--text-dim); font-size: 12px; font-weight: 700; }
+    .lv-seg button + button { border-left: 1px solid var(--border-strong); }
+    .lv-seg button.active { background: var(--primary); color: var(--on-primary); }
+
+    /* ---- Danh sách công thức ---- */
+    .rows { display: flex; flex-direction: column; gap: 5px; }
+    .row {
+      display: grid;
+      grid-template-columns: 22px 40px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      width: 100%;
+      padding: 6px 10px 6px 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .row:hover { border-color: color-mix(in srgb, var(--primary) 55%, transparent); background: var(--surface-hover); }
+    .row .rk { font-weight: 700; font-size: 12px; color: var(--text-faint); text-align: center; }
+    .row:nth-child(-n+3) .rk { color: var(--warning); }
+    .ico { width: 40px; height: 40px; padding: 2px; object-fit: contain; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--rarity, var(--border)); }
+    .row .nm { min-width: 0; }
+    .row .nm b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .row .nm span { font-size: 11.5px; color: var(--text-dim); }
+    .row .val { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--primary); }
+    .row .val small { display: block; font-size: 11px; font-weight: 500; color: var(--text-dim); }
+    .row.neg .val { color: var(--error); }
+    .row.neg { opacity: 0.7; }
+    .row.na .val { color: var(--text-faint); font-weight: 500; font-size: 12px; }
+    .tag { display: inline-block; margin-left: 4px; padding: 0 5px; border-radius: 3px; font-size: 10px; font-weight: 700; vertical-align: 1px; }
+    .tag.ex { background: var(--warning-soft); color: var(--warning); }
+    .tag.ld { background: var(--error-soft); color: var(--error); }
+
+    details.more { margin-top: 8px; }
+    details.more summary { cursor: pointer; padding: 6px 2px; font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+    details.more .rows { margin-top: 4px; }
+
+    /* ---- Chi tiết ---- */
+    .d-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding-right: 28px; }
+    .d-head .ico { width: 56px; height: 56px; }
+    .d-head h3 { margin: 0; }
+    .kv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; }
+    .kv div { padding: 6px 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; }
+    .kv dt { font-size: 10.5px; color: var(--text-faint); text-transform: uppercase; }
+    .kv dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .kv dd.pos { color: var(--primary); }
+    .kv dd.neg { color: var(--error); }
+    .d-sec { margin: 12px 0 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-dim); }
+    .mat { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
+    .mat .ico { width: 32px; height: 32px; }
+    .mat small { display: block; font-size: 11px; color: var(--text-faint); }
+    .mat .c { text-align: right; font-variant-numeric: tabular-nums; }
+    .sum { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+    .sum b { font-variant-numeric: tabular-nums; }
+
+    .timer-form { margin-top: 14px; padding: 10px; background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 6px; }
+    .timer-form .row2 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; font-size: 13px; }
+    .timer-form input { width: 58px; text-align: center; }
+
+    .state-box { padding: 36px 12px; text-align: center; color: var(--text-dim); }
+  </style>
+</head>
+
+<body>
+  <div class="view-container">
+    <div class="view-header">
+      <div class="title-group">
+        <button class="back-btn" data-back></button>
+        <h3 class="view-title">Sản xuất Căn Cứ Ngầm<small id="stamp">Xếp hạng công thức theo giá chợ</small></h3>
+      </div>
+      <button class="btn btn-sm btn-ghost" id="refreshBtn" title="Tải giá mới nhất">↻ Làm mới</button>
+    </div>
+
+    <section class="panel">
+      <div class="panel-title"><span>Hẹn giờ sản xuất</span><span class="muted" style="text-transform:none; letter-spacing:0; font-weight:500">Báo khi xong, kể cả khi đóng tiện ích</span></div>
+      <div class="timers" id="timers"></div>
+    </section>
+
+    <section class="panel controls">
+      <div class="station-tabs" id="stationTabs"></div>
+      <div class="ctl-row"><span class="label">Xếp theo</span><div class="chips" id="sortChips"></div></div>
+      <div class="ctl-row"><span class="label" title="Thời gian bạn rời game. Chỉ hiện món xong kịp, lãi/giờ tính trên thời gian vắng">Vắng tối đa</span><div class="chips" id="awayChips"></div></div>
+    </section>
+
+    <div class="list-head">
+      <h4 id="stationTitle"></h4>
+      <div class="lv-seg" id="lvSeg" title="Cấp trạm của bạn"></div>
+    </div>
+    <div id="list"><div class="state-box">Đang tải dữ liệu...</div></div>
+
+    <p class="source-note">
+      Nguồn dữ liệu công thức, giá và icon: <a href="https://dfloadout.gg/de-xuat-san-xuat" target="_blank" rel="noopener">DFLoadout.gg · Đề xuất sản xuất</a>.
+      Lãi đã trừ thuế và phí ký gửi chợ; chỉ là ước tính theo giá tham khảo.
+    </p>
+  </div>
+
+  <div class="modal-overlay" id="detail" hidden>
+    <div class="modal-content" role="dialog" aria-modal="true" id="detailBody"></div>
+  </div>
+
+  <script src="../../core/shell.js"></script>
+  <script src="../../core/dfloadout.js"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>

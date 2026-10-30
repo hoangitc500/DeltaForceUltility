@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delta Force Utility</title>
+  <link rel="stylesheet" href="core/theme.css">
+  <script src="core/theme.js"></script>
+  <style>
+    .hero { margin: 4px 0 14px; }
+    .hero h1 { margin: 0; font-size: 20px; font-weight: 700; }
+    .hero p { margin: 2px 0 0; font-size: 13px; color: var(--text-dim); }
+
+    /* ---- Mật khẩu hôm nay ---- */
+    .pw-strip { margin-bottom: 14px; padding: 12px; }
+    .pw-strip .panel-title { margin-bottom: 8px; }
+    .pw-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .pw-chip {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1px;
+      min-width: 0;
+      padding: 6px 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .pw-chip:hover { border-color: var(--primary); background: var(--primary-soft); }
+    .pw-chip .map { max-width: 100%; font-size: 11px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pw-chip .code { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--primary); letter-spacing: 1px; }
+    .pw-skeleton { height: 46px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border); }
+    .pw-strip .source-note { margin-top: 8px; }
+
+    /* ---- Menu ---- */
+    .grid-menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+
+    .menu-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      min-height: 140px;
+      padding: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      text-align: left;
+      overflow: hidden;
+      transition: border-color 0.15s, transform 0.15s, background 0.15s;
+    }
+    .menu-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 22px;
+      height: 22px;
+      background: linear-gradient(225deg, var(--primary) 50%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .menu-card:not(:disabled):hover { background: var(--surface-hover); border-color: var(--primary); transform: translateY(-2px); }
+    .menu-card:not(:disabled):hover::after { opacity: 1; }
+    .menu-card:not(:disabled):hover .mod-icon { background: var(--tone); color: var(--bg); }
+    .menu-card:disabled { opacity: 0.5; cursor: not-allowed; }
+    .menu-card .mod-icon { margin-bottom: 4px; transition: background 0.15s, color 0.15s; }
+
+    .card-title { font-weight: 700; font-size: 15px; line-height: 1.25; }
+    .card-desc { font-size: 12px; color: var(--text-dim); }
+    .card-status { margin-top: auto; font-size: 11.5px; font-weight: 600; color: var(--primary); }
+    .card-status.live::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: currentColor; animation: blink 1.2s infinite; }
+    @keyframes blink { 50% { opacity: 0.25; } }
+
+    .soon { position: absolute; top: 12px; right: 12px; }
+    :root.light-theme .mod-icon.tone-violet { --tone: #6a3fc9; }
+    .mod-icon.tone-teal { --tone: #26c6da; }
+    :root.light-theme .mod-icon.tone-teal { --tone: #00838f; }
+  </style>
+</head>
+
+<body>
+  <div class="view-container">
+    <div class="hero">
+      <h1>Xin chào, chiến binh!</h1>
+      <p>Bộ công cụ hỗ trợ game thủ Delta Force</p>
+    </div>
+
+    <section class="panel pw-strip" id="pwStrip">
+      <div class="panel-title">
+        <span>Mật khẩu phòng hôm nay</span>
+        <button class="btn btn-ghost btn-sm" id="pwMore" style="text-transform:none; letter-spacing:0">Xem đường đi →</button>
+      </div>
+      <div class="pw-grid" id="pwGrid">
+        <div class="pw-skeleton"></div><div class="pw-skeleton"></div><div class="pw-skeleton"></div>
+      </div>
+      <p class="source-note">Nguồn: <a href="https://dfloadout.gg/mat-khau-hang-ngay" target="_blank" rel="noopener">DFLoadout.gg</a><span id="pwUpdated"></span></p>
+    </section>
+
+    <div class="grid-menu">
+      <button class="menu-card" data-go="modules/redeem/index.html">
+        <span class="mod-icon" data-icon="gift"></span>
+        <span class="card-title">Nhập Giftcode tự động</span>
+        <span class="card-desc">Đổi hàng loạt mã, tự bỏ qua mã đã nhập</span>
+        <span class="card-status" id="redeemStatus"></span>
+      </button>
+      <button class="menu-card" data-go="modules/armory/index.html">
+        <span class="mod-icon tone-accent" data-icon="crosshair"></span>
+        <span class="card-title">Kho Loadout Meta</span>
+        <span class="card-desc">Mã cải tiến súng hot nhất từ cộng đồng</span>
+        <span class="card-status" id="armoryStatus"></span>
+      </button>
+      <button class="menu-card" data-go="modules/production/index.html">
+        <span class="mod-icon tone-teal" data-icon="factory"></span>
+        <span class="card-title">Sản xuất Căn Cứ</span>
+        <span class="card-desc">Món lãi nhất mỗi trạm, hẹn giờ báo khi xong</span>
+        <span class="card-status" id="prodStatus"></span>
+      </button>
+      <button class="menu-card" data-go="modules/passwords/index.html">
+        <span class="mod-icon tone-warning" data-icon="key"></span>
+        <span class="card-title">Mật khẩu hằng ngày</span>
+        <span class="card-desc">Mã phòng mật khẩu và đường đi từng bản đồ</span>
+      </button>
+      <button class="menu-card" data-go="modules/market/index.html">
+        <span class="mod-icon tone-violet" data-icon="market"></span>
+        <span class="card-title">Giá chợ đấu giá</span>
+        <span class="card-desc">Tra giá thấp nhất đang rao, cập nhật mỗi giờ</span>
+      </button>
+      <button class="menu-card" data-go="modules/maps/index.html">
+        <span class="mod-icon tone-accent" data-icon="map"></span>
+        <span class="card-title">Bản Đồ</span>
+        <span class="card-desc">Bản đồ tương tác, điểm loot, chìa khóa phòng</span>
+      </button>
+      <button class="menu-card" data-go="modules/wiki/index.html">
+        <span class="mod-icon" data-icon="book"></span>
+        <span class="card-title">Cẩm Nang</span>
+        <span class="card-desc">Tra cứu súng, giáp, đạn, vật phẩm, đặc công</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="core/shell.js"></script>
+  <script src="core/dfloadout.js"></script>
+  <script src="popup.js"></script>
+</body>
+
+</html>

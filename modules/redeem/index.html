@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nhập Giftcode - Delta Force Utility</title>
+  <link rel="stylesheet" href="../../core/theme.css">
+  <script src="../../core/theme.js"></script>
+  <style>
+    .redeem-grid { display: grid; gap: 12px; }
+    @media (min-width: 720px) {
+      .redeem-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: start; }
+      .results-panel { position: sticky; top: 66px; }
+    }
+
+    .account-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      max-width: 100%;
+      padding: 4px 10px;
+      background: var(--primary-soft);
+      border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+      border-radius: 999px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .account-chip::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+    .input-tools { display: flex; gap: 6px; margin-bottom: 8px; }
+    .input-tools .btn-accent { flex: 1; }
+
+    #codesInput { height: 150px; min-height: 90px; }
+    #codesInput:disabled { opacity: 0.6; }
+
+    .code-meter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      margin: 8px 0 10px;
+      font-size: 12px;
+      color: var(--text-dim);
+      min-height: 18px;
+    }
+    .code-meter b { color: var(--text); }
+    .code-meter .ready b { color: var(--primary); }
+
+    .options-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+
+    .hint {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: var(--accent-soft);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .hint b { color: var(--accent); }
+
+    /* ---- Tiến trình ---- */
+    .run-box {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--primary);
+      border-radius: 6px;
+    }
+    .run-box.paused { border-left-color: var(--accent); }
+    .run-status { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; margin-bottom: 4px; }
+    .run-status .count { font-variant-numeric: tabular-nums; color: var(--primary); }
+    .run-sub { font-size: 12px; color: var(--text-dim); min-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .run-sub code { font-family: var(--mono); color: var(--text); }
+    .progress { height: 6px; margin: 10px 0 12px; background: var(--input-bg); border-radius: 3px; overflow: hidden; }
+    .progress > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.3s ease; }
+    .run-box.paused .progress > div { background: var(--accent); }
+    .run-actions { display: flex; gap: 8px; }
+    .run-actions .btn { flex: 1; }
+
+    /* ---- Kết quả ---- */
+    .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+    .tile {
+      padding: 8px 4px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-align: center;
+      transition: 0.15s;
+    }
+    .tile:hover { border-color: var(--border-strong); }
+    .tile.active { border-color: currentColor; background: color-mix(in srgb, currentColor 10%, transparent); }
+    .tile .value { display: block; font-size: 20px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .tile .label { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; color: var(--text-dim); }
+    .tile[data-filter="all"] { color: var(--text); }
+    .tile[data-filter="success"] { color: var(--success); }
+    .tile[data-filter="used"] { color: var(--warning); }
+    .tile[data-filter="retry"] { color: var(--error); }
+
+    .end-banner {
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      font-size: 13px;
+    }
+    .end-banner.ok { border-color: color-mix(in srgb, var(--primary) 40%, transparent); background: var(--primary-soft); }
+    .end-banner.err { border-color: color-mix(in srgb, var(--error) 40%, transparent); background: var(--error-soft); }
+    .end-banner .title { font-weight: 700; margin-bottom: 2px; }
+    .end-banner .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+    #results { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; padding-right: 2px; }
+    :root.view-tab #results { max-height: calc(100vh - 330px); }
+    .res-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 8px 8px 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border-strong);
+      border-radius: 6px;
+      animation: viewIn 0.2s ease;
+    }
+    .res-item.s-success { border-left-color: var(--success); }
+    .res-item.s-used { border-left-color: var(--warning); }
+    .res-item.s-retry { border-left-color: var(--error); }
+    .res-icon { flex: none; width: 18px; text-align: center; font-weight: 700; }
+    .s-success .res-icon { color: var(--success); }
+    .s-used .res-icon { color: var(--warning); }
+    .s-retry .res-icon { color: var(--error); }
+    .res-body { flex: 1; min-width: 0; }
+    .res-code { font-family: var(--mono); font-weight: 600; word-break: break-all; }
+    .res-msg { font-size: 12px; color: var(--text-dim); }
+    .res-item .icon-btn { width: 28px; height: 28px; flex: none; opacity: 0.6; }
+    .res-item:hover .icon-btn { opacity: 1; }
+
+    .empty {
+      padding: 28px 12px;
+      text-align: center;
+      color: var(--text-faint);
+      font-size: 13px;
+    }
+    .empty .big { font-size: 28px; margin-bottom: 4px; }
+
+    #historyTextarea { height: 240px; }
+  </style>
+</head>
+
+<body>
+  <div class="view-container">
+    <div class="view-header">
+      <div class="title-group">
+        <button class="back-btn" data-back></button>
+        <h3 class="view-title">Nhập Giftcode Tự Động<small>Đổi hàng loạt trên redeem.df.garena.sg</small></h3>
+      </div>
+      <span class="account-chip hidden" id="accountChip" title="Tài khoản đang đổi code"></span>
+    </div>
+
+    <div class="redeem-grid">
+      <!-- Cột nhập mã -->
+      <section class="panel">
+        <div class="panel-title">Danh sách mã</div>
+
+        <div class="input-tools">
+          <button class="btn btn-accent" id="cloudFetchBtn" title="Gộp mã mới nhất từ danh sách của tác giả và DFLoadout.gg (tự bỏ qua mã bạn đã nhập)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8"/><path d="m8 17 4 4 4-4"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+            Lấy code mới
+          </button>
+          <button class="btn btn-danger" id="clearBtn" title="Xóa toàn bộ ô nhập">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+
+        <textarea id="codesInput" class="input" spellcheck="false"
+          placeholder="Dán danh sách giftcode vào đây...&#10;Mỗi mã cách nhau bởi xuống dòng, dấu cách hoặc dấu phẩy"></textarea>
+
+        <div class="code-meter" id="codeMeter"></div>
+
+        <div class="options-row">
+          <label class="check"><input type="checkbox" id="skipHistory" checked> Bỏ qua mã đã nhập trước đây</label>
+          <button class="btn btn-ghost btn-sm" id="openHistoryBtn" title="Xem, sửa, sao lưu lịch sử các mã đã nhập">Lịch sử (<span id="historyCount">0</span>)</button>
+        </div>
+
+        <button id="redeemBtn" class="btn btn-primary btn-block">Bắt đầu đổi</button>
+
+        <div class="run-box hidden" id="runBox">
+          <div class="run-status"><span id="runTitle">Đang đổi mã</span><span class="count" id="runCount"></span></div>
+          <div class="run-sub" id="runSub"></div>
+          <div class="progress"><div id="progressFill"></div></div>
+          <div class="run-actions">
+            <button class="btn btn-accent" id="pauseBtn">Tạm dừng</button>
+            <button class="btn btn-accent hidden" id="resumeBtn">Tiếp tục</button>
+            <button class="btn btn-danger" id="stopBtn">Dừng hẳn</button>
+          </div>
+        </div>
+
+        <div class="hint hidden" id="popupHint">
+          <span>💡</span>
+          <span>Popup sẽ tự đóng khi chuyển sang trang Garena, nhưng <b>tiến trình vẫn chạy</b>. Mở lại tiện ích để xem kết quả, hoặc dùng <b>Sidebar</b> để theo dõi trực tiếp.</span>
+        </div>
+
+        <p class="source-note">
+          Nguồn code: <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQS9k3934WWwsVa5yNKAnmBIY80dmtV9ezNgZeSvqgRI0T7QnlCKN_5XdcZFiPxI012vsisZBm92L9b/pubhtml" target="_blank" rel="noopener">danh sách của tác giả</a>
+          và <a href="https://dfloadout.gg/code-garena" target="_blank" rel="noopener">DFLoadout.gg · Code Garena</a>
+        </p>
+      </section>
+
+      <!-- Cột kết quả -->
+      <section class="panel results-panel">
+        <div class="panel-title">Kết quả <span class="muted" id="resultsTime" style="text-transform:none; letter-spacing:0; font-weight:500"></span></div>
+
+        <div class="tiles" id="tiles">
+          <button class="tile active" data-filter="all"><span class="value" id="statAll">0</span><span class="label">Tất cả</span></button>
+          <button class="tile" data-filter="success" title="Quà đã được gửi vào hộp thư trong game"><span class="value" id="statSuccess">0</span><span class="label">Thành công</span></button>
+          <button class="tile" data-filter="used" title="Mã đã dùng, hết hạn, hết lượt hoặc không hợp lệ (được lưu vào lịch sử)"><span class="value" id="statUsed">0</span><span class="label">Không dùng được</span></button>
+          <button class="tile" data-filter="retry" title="Lỗi tạm thời: mạng, máy chủ bận... (không lưu lịch sử, có thể chạy lại)"><span class="value" id="statRetry">0</span><span class="label">Cần thử lại</span></button>
+        </div>
+
+        <div class="end-banner hidden" id="endBanner"></div>
+
+        <div id="results"></div>
+        <div class="empty" id="resultsEmpty">
+          <div class="big">🎁</div>
+          Chưa có kết quả. Dán mã hoặc bấm <b>"Lấy code mới"</b> rồi <b>"Bắt đầu đổi"</b>.
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Quản lý lịch sử -->
+  <div id="historyModal" class="modal-overlay" hidden>
+    <div class="modal-content" role="dialog" aria-modal="true">
+      <button class="icon-btn modal-close" data-close-history>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <h3>Lịch sử mã đã nhập</h3>
+      <p class="muted" style="font-size:12px; margin:0 0 10px">
+        Gồm các mã đã đổi thành công hoặc không còn dùng được. Khi bật "Bỏ qua mã đã nhập", các mã này sẽ không bị chạy lại.
+        Mỗi mã một dòng, bạn có thể sửa trực tiếp.
+      </p>
+      <textarea id="historyTextarea" class="input" spellcheck="false" placeholder="Chưa có mã nào trong lịch sử"></textarea>
+      <div class="muted" style="font-size:12px; margin-top:6px" id="historyMeta"></div>
+      <div class="modal-actions">
+        <button id="saveHistoryBtn" class="btn btn-accent">Lưu thay đổi</button>
+        <button id="clearHistoryBtn" class="btn btn-danger">Xóa toàn bộ</button>
+      </div>
+      <div class="modal-actions" style="margin-top:8px">
+        <button id="exportHistoryBtn" class="btn">⬇️ Xuất file .txt</button>
+        <button id="importHistoryBtn" class="btn">⬆️ Nhập file .txt</button>
+        <input type="file" id="historyFileInput" accept=".txt,text/plain" hidden>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../core/shell.js"></script>
+  <script src="../../core/dfloadout.js"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mật khẩu hằng ngày - Delta Force Utility</title>
+  <link rel="stylesheet" href="../../core/theme.css">
+  <script src="../../core/theme.js"></script>
+  <style>
+    .pw-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+    .pw-card { padding: 0; overflow: hidden; }
+    .pw-card + .pw-card { margin-top: 0; }
+    .pw-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; }
+    .pw-map { font-weight: 700; font-size: 15px; }
+    .pw-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.4px; }
+    .pw-code {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--input-bg);
+      border: 1px dashed var(--border-strong);
+      border-radius: 6px;
+      color: var(--primary);
+      font-family: var(--mono);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      transition: 0.15s;
+    }
+    .pw-code:hover { border-style: solid; border-color: var(--primary); background: var(--primary-soft); }
+    .pw-code svg { width: 15px; height: 15px; color: var(--text-dim); }
+
+    .guide { position: relative; border-top: 1px solid var(--border); }
+    .guide-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+    .guide-track::-webkit-scrollbar { display: none; }
+    .guide-slide { flex: 0 0 100%; scroll-snap-align: start; margin: 0; }
+    .guide-slide img { display: block; width: 100%; aspect-ratio: 947 / 360; object-fit: cover; background: var(--surface-2); cursor: zoom-in; }
+    .guide-slide figcaption { padding: 8px 14px 10px; font-size: 12.5px; color: var(--text-dim); }
+    .guide-nav {
+      position: absolute;
+      top: calc(50% - 28px);
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font-size: 16px;
+      line-height: 28px;
+    }
+    .guide-nav.prev { left: 8px; }
+    .guide-nav.next { right: 8px; }
+    .guide-count { position: absolute; top: 8px; right: 8px; padding: 1px 7px; border-radius: 4px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 11px; }
+
+    .meta-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 12px; color: var(--text-dim); }
+    .state-box { padding: 36px 12px; text-align: center; color: var(--text-dim); }
+
+    .zoom-overlay { cursor: zoom-out; }
+    .zoom-overlay img { max-width: 100%; max-height: calc(100vh - 32px); border-radius: 8px; }
+  </style>
+</head>
+
+<body>
+  <div class="view-container">
+    <div class="view-header">
+      <div class="title-group">
+        <button class="back-btn" data-back></button>
+        <h3 class="view-title">Mật khẩu hằng ngày<small>Mã mở phòng mật khẩu trong Chiến Dịch</small></h3>
+      </div>
+      <button class="btn btn-sm btn-ghost" id="refreshBtn" title="Tải lại dữ liệu mới nhất">↻ Làm mới</button>
+    </div>
+
+    <div class="meta-row"><span id="updated">Đang tải...</span><span class="muted">Bấm vào mã để copy</span></div>
+    <div class="pw-list" id="list"></div>
+
+    <p class="source-note">
+      Nguồn dữ liệu và ảnh hướng dẫn: <a href="https://dfloadout.gg/mat-khau-hang-ngay" target="_blank" rel="noopener">DFLoadout.gg · Mật khẩu hằng ngày</a>
+    </p>
+  </div>
+
+  <div class="modal-overlay zoom-overlay" id="zoom" hidden><img alt=""></div>
+
+  <script src="../../core/shell.js"></script>
+  <script src="../../core/dfloadout.js"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>
